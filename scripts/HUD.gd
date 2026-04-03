@@ -7,15 +7,15 @@ signal weapon_selected(weapon_name: String)
 
 @onready var score_label: Label = $TopBar/ScoreLabel
 @onready var timer_label: Label = $TopBar/TimerLabel
-@onready var money_label: Label = $TopBar/MoneyLabel
+@onready var money_label: Label = $MoneyBar/MoneyLabel
 @onready var hearts_label: Label = $TopBar/HeartsLabel
 @onready var weapon_label: Label = $BottomBar/WeaponLabel
 @onready var ammo_label: Label = $BottomBar/AmmoLabel
 @onready var delivery_label: Label = $DeliveryBanner
 @onready var message_label: Label = $MessageLabel
-@onready var joystick_base: Control = $VirtualJoystick/JoystickBase
-@onready var joystick_knob: Control = $VirtualJoystick/JoystickKnob
-@onready var fire_button: Control = $FireButton
+@onready var joystick_base: ColorRect = $VirtualJoystick/JoystickBase
+@onready var joystick_knob: ColorRect = $VirtualJoystick/JoystickKnob
+@onready var fire_button: ColorRect = $FireButton
 @onready var arrow_indicator: Label = $ArrowIndicator
 
 const WEAPON_COLORS = {

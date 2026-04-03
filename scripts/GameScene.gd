@@ -55,7 +55,7 @@ var buildings_right: Array = []
 @onready var pickup_marker: ColorRect = $Markers/PickupMarker
 @onready var dropoff_marker: ColorRect = $Markers/DropoffMarker
 @onready var scanline_overlay: ColorRect = $ScanlineOverlay
-@onready var game_over_panel: Control = $GameOverPanel
+@onready var game_over_panel: ColorRect = $HUD/GameOverPanel
 @onready var enemy_container: Node2D = $EnemyContainer
 @onready var weapon_container: Node2D = $WeaponContainer
 
