@@ -1,3 +1,4 @@
+class_name Enemy
 extends CharacterBody2D
 ## Enemy.gd - Enemy AI controller.
 ## Types: saboteur, car, police
