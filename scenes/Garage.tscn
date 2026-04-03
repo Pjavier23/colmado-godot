@@ -1,0 +1,149 @@
+[gd_scene load_steps=2 format=3 uid="uid://garage001"]
+
+[ext_resource type="Script" path="res://scripts/Garage.gd" id="1_garage"]
+
+[node name="Garage" type="Node2D"]
+script = ExtResource("1_garage")
+
+[node name="Background" type="ColorRect" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.05, 0.05, 0.15, 1)
+
+[node name="TopBar" type="ColorRect" parent="."]
+offset_left = 0.0
+offset_top = 0.0
+offset_right = 390.0
+offset_bottom = 55.0
+color = Color(0.1, 0.1, 0.25, 1)
+
+[node name="TitleLabel" type="Label" parent="TopBar"]
+offset_left = 10.0
+offset_top = 8.0
+offset_right = 260.0
+offset_bottom = 48.0
+text = "🏍  GARAGE"
+theme_override_font_sizes/font_size = 22
+theme_override_colors/font_color = Color(1.0, 0.9, 0.1, 1)
+
+[node name="MoneyLabel" type="Label" parent="TopBar"]
+offset_left = 270.0
+offset_top = 12.0
+offset_right = 385.0
+offset_bottom = 48.0
+text = "$ 0"
+horizontal_alignment = 2
+theme_override_font_sizes/font_size = 16
+theme_override_colors/font_color = Color(0.2, 1.0, 0.4, 1)
+
+[node name="NavButtons" type="HBoxContainer" parent="."]
+offset_left = 10.0
+offset_top = 65.0
+offset_right = 380.0
+offset_bottom = 105.0
+
+[node name="PrevButton" type="Button" parent="NavButtons"]
+custom_minimum_size = Vector2(70, 40)
+text = "◀"
+theme_override_font_sizes/font_size = 20
+
+[node name="NavSpacer" type="Control" parent="NavButtons"]
+size_flags_horizontal = 3
+
+[node name="NextButton" type="Button" parent="NavButtons"]
+custom_minimum_size = Vector2(70, 40)
+text = "▶"
+theme_override_font_sizes/font_size = 20
+
+[node name="VehicleDisplay" type="ColorRect" parent="."]
+offset_left = 120.0
+offset_top = 115.0
+offset_right = 270.0
+offset_bottom = 280.0
+color = Color(0.2, 0.6, 1.0, 1)
+
+[node name="VehicleDisplayLabel" type="Label" parent="VehicleDisplay"]
+offset_left = 0.0
+offset_top = 50.0
+offset_right = 150.0
+offset_bottom = 165.0
+text = "🏍"
+horizontal_alignment = 1
+vertical_alignment = 1
+theme_override_font_sizes/font_size = 48
+
+[node name="Panel" type="ColorRect" parent="."]
+offset_left = 10.0
+offset_top = 290.0
+offset_right = 380.0
+offset_bottom = 520.0
+color = Color(0.08, 0.08, 0.20, 1)
+
+[node name="VehicleName" type="Label" parent="Panel"]
+offset_left = 10.0
+offset_top = 10.0
+offset_right = 360.0
+offset_bottom = 45.0
+text = "Bicicleta"
+theme_override_font_sizes/font_size = 20
+theme_override_colors/font_color = Color(1.0, 0.9, 0.1, 1)
+
+[node name="VehicleDesc" type="Label" parent="Panel"]
+offset_left = 10.0
+offset_top = 50.0
+offset_right = 360.0
+offset_bottom = 100.0
+text = "Descripcion..."
+theme_override_font_sizes/font_size = 13
+theme_override_colors/font_color = Color(0.8, 0.8, 1.0, 1)
+
+[node name="SpeedLabel" type="Label" parent="Panel"]
+offset_left = 10.0
+offset_top = 110.0
+offset_right = 360.0
+offset_bottom = 140.0
+text = "VELOCIDAD: 150"
+theme_override_font_sizes/font_size = 13
+theme_override_colors/font_color = Color(0.6, 0.9, 1.0, 1)
+
+[node name="CostLabel" type="Label" parent="Panel"]
+offset_left = 10.0
+offset_top = 145.0
+offset_right = 360.0
+offset_bottom = 175.0
+text = "PRECIO: $0"
+theme_override_font_sizes/font_size = 13
+theme_override_colors/font_color = Color(0.9, 0.7, 0.2, 1)
+
+[node name="StatusLabel" type="Label" parent="Panel"]
+offset_left = 10.0
+offset_top = 180.0
+offset_right = 360.0
+offset_bottom = 215.0
+text = "SELECCIONADO"
+theme_override_font_sizes/font_size = 14
+theme_override_colors/font_color = Color(0.2, 1.0, 0.4, 1)
+
+[node name="ButtonPanel" type="VBoxContainer" parent="."]
+offset_left = 10.0
+offset_top = 530.0
+offset_right = 380.0
+offset_bottom = 720.0
+theme_override_constants/separation = 10
+
+[node name="BuyButton" type="Button" parent="ButtonPanel"]
+custom_minimum_size = Vector2(0, 55)
+text = "COMPRAR"
+theme_override_font_sizes/font_size = 20
+visible = false
+
+[node name="SelectButton" type="Button" parent="ButtonPanel"]
+custom_minimum_size = Vector2(0, 55)
+text = "✓ SELECCIONAR"
+theme_override_font_sizes/font_size = 18
+
+[node name="BackButton" type="Button" parent="ButtonPanel"]
+custom_minimum_size = Vector2(0, 45)
+text = "← VOLVER"
+theme_override_font_sizes/font_size = 16
