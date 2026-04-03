@@ -34,6 +34,8 @@ func _input(event: InputEvent) -> void:
 		get_tree().change_scene_to_file("res://scenes/MissionSelect.tscn")
 	elif event is InputEventMouseButton and event.pressed:
 		get_tree().change_scene_to_file("res://scenes/MissionSelect.tscn")
+	elif event is InputEventKey and event.pressed and event.keycode == KEY_SPACE:
+		get_tree().change_scene_to_file("res://scenes/MissionSelect.tscn")
 
 func _process(delta: float) -> void:
 	_scroll_buildings(delta)
@@ -101,19 +103,11 @@ func _update_wobble(delta: float) -> void:
 		title_label.position.y = 0 + cos(wobble_time * 0.7) * 2.0
 
 	# Blink press start
-	var blink_speed = 1.5
-	var t = fmod(Time.get_ticks_msec() / 1000.0, 1.0 / blink_speed)
 	if press_start_label:
-		press_start_label.visible = (fmod(Time.get_ticks_msec() / 1000.0 * blink_speed, 1.0) < 0.6)
+		press_start_label.visible = (fmod(Time.get_ticks_msec() / 1000.0 * 1.5, 1.0) < 0.6)
 
 func _on_start_button_pressed() -> void:
 	get_tree().change_scene_to_file("res://scenes/MissionSelect.tscn")
-
-func _input(event: InputEvent) -> void:
-	if event is InputEventScreenTouch and event.pressed:
-		get_tree().change_scene_to_file("res://scenes/MissionSelect.tscn")
-	if event is InputEventKey and event.pressed and event.keycode == KEY_SPACE:
-		get_tree().change_scene_to_file("res://scenes/MissionSelect.tscn")
 
 func _on_blink_timer_timeout() -> void:
 	blink_visible = !blink_visible

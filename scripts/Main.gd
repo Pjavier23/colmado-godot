@@ -4,5 +4,5 @@ extends Node
 
 func _ready() -> void:
 	# Small delay to let the engine initialize fully, then go to menu
-	await get_tree().create_timer(0.1).timeout
+	await get_tree().create_timer(0.5).timeout
 	get_tree().change_scene_to_file("res://scenes/MenuScene.tscn")

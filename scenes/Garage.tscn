@@ -147,3 +147,9 @@ theme_override_font_sizes/font_size = 18
 custom_minimum_size = Vector2(0, 45)
 text = "← VOLVER"
 theme_override_font_sizes/font_size = 16
+
+[connection signal="pressed" from="NavButtons/PrevButton" to="." method="_on_prev_button_pressed"]
+[connection signal="pressed" from="NavButtons/NextButton" to="." method="_on_next_button_pressed"]
+[connection signal="pressed" from="ButtonPanel/BuyButton" to="." method="_on_buy_button_pressed"]
+[connection signal="pressed" from="ButtonPanel/SelectButton" to="." method="_on_select_button_pressed"]
+[connection signal="pressed" from="ButtonPanel/BackButton" to="." method="_on_back_button_pressed"]

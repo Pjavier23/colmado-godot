@@ -365,3 +365,6 @@ offset_right = 290.0
 offset_bottom = 310.0
 text = "← MENU"
 theme_override_font_sizes/font_size = 18
+
+[connection signal="pressed" from="HUD/GameOverPanel/RetryButton" to="." method="_on_retry_button_pressed"]
+[connection signal="pressed" from="HUD/GameOverPanel/MenuButton" to="." method="_on_menu_button_pressed"]
