@@ -29,6 +29,12 @@ func _ready() -> void:
 	_setup_buildings()
 	_start_wobble()
 
+func _input(event: InputEvent) -> void:
+	if event is InputEventScreenTouch and event.pressed:
+		get_tree().change_scene_to_file("res://scenes/MissionSelect.tscn")
+	elif event is InputEventMouseButton and event.pressed:
+		get_tree().change_scene_to_file("res://scenes/MissionSelect.tscn")
+
 func _process(delta: float) -> void:
 	_scroll_buildings(delta)
 	_update_wobble(delta)

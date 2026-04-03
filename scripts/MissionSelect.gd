@@ -51,6 +51,19 @@ func _ready() -> void:
 	_update_panel()
 	if money_label:
 		money_label.text = "$ %d" % GameState.money
+	# Connect buttons
+	var play_btn = get_node_or_null("ButtonPanel/PlayButton")
+	var garage_btn = get_node_or_null("ButtonPanel/GarageButton")
+	var shop_btn = get_node_or_null("ButtonPanel/ShopButton")
+	var back_btn = get_node_or_null("ButtonPanel/BackButton")
+	if play_btn and not play_btn.pressed.is_connected(_on_play_button_pressed):
+		play_btn.pressed.connect(_on_play_button_pressed)
+	if garage_btn and not garage_btn.pressed.is_connected(_on_garage_button_pressed):
+		garage_btn.pressed.connect(_on_garage_button_pressed)
+	if shop_btn and not shop_btn.pressed.is_connected(_on_shop_button_pressed):
+		shop_btn.pressed.connect(_on_shop_button_pressed)
+	if back_btn and not back_btn.pressed.is_connected(_on_back_button_pressed):
+		back_btn.pressed.connect(_on_back_button_pressed)
 
 func _populate_missions() -> void:
 	if not mission_cards:
