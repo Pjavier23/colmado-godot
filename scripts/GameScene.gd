@@ -48,6 +48,9 @@ var road_marks: Array = []
 var buildings_left: Array = []
 var buildings_right: Array = []
 
+# Player direction (set by HUD)
+var player_direction: Vector2 = Vector2.ZERO
+
 # ─── Node references ──────────────────────────────────────────────────────────
 @onready var player: CharacterBody2D = $Player
 @onready var hud: CanvasLayer = $HUD
@@ -70,10 +73,37 @@ func _ready() -> void:
 	_setup_hud()
 	_spawn_pickup()
 	_connect_player()
-	if hud:
-		hud.connect("joystick_moved", _on_joystick_moved)
-		hud.connect("fire_pressed", _on_fire_pressed)
-		hud.connect("weapon_selected", _on_weapon_selected)
+	_connect_hud()
+	_connect_game_over_buttons()
+
+func _connect_hud() -> void:
+	if not hud:
+		return
+	# Connect direction_changed (new primary signal)
+	if hud.has_signal("direction_changed"):
+		if not hud.direction_changed.is_connected(_on_direction_changed):
+			hud.direction_changed.connect(_on_direction_changed)
+	# Also connect old joystick_moved for compatibility
+	if hud.has_signal("joystick_moved"):
+		if not hud.joystick_moved.is_connected(_on_joystick_moved):
+			hud.joystick_moved.connect(_on_joystick_moved)
+	if hud.has_signal("fire_pressed"):
+		if not hud.fire_pressed.is_connected(_on_fire_pressed):
+			hud.fire_pressed.connect(_on_fire_pressed)
+	if hud.has_signal("weapon_selected"):
+		if not hud.weapon_selected.is_connected(_on_weapon_selected):
+			hud.weapon_selected.connect(_on_weapon_selected)
+
+func _connect_game_over_buttons() -> void:
+	# Connect game over panel buttons as backup (HUD._ready also does this)
+	var retry_btn = get_node_or_null("HUD/GameOverPanel/RetryButton")
+	if retry_btn:
+		if not retry_btn.pressed.is_connected(_on_retry_button_pressed):
+			retry_btn.pressed.connect(_on_retry_button_pressed)
+	var menu_btn = get_node_or_null("HUD/GameOverPanel/MenuButton")
+	if menu_btn:
+		if not menu_btn.pressed.is_connected(_on_menu_button_pressed):
+			menu_btn.pressed.connect(_on_menu_button_pressed)
 
 func _load_mission() -> void:
 	var m_idx = clamp(GameState.current_mission, 0, MISSIONS_CONFIG.size() - 1)
@@ -367,8 +397,15 @@ func _spawn_dropoff() -> void:
 		dropoff_marker.visible = true
 	dropoff_active = true
 
-# ─── Input ────────────────────────────────────────────────────────────────────
+# ─── Input / Signal handlers ──────────────────────────────────────────────────
+
+func _on_direction_changed(dir: Vector2) -> void:
+	player_direction = dir
+	if player and player.has_method("set_joystick_direction"):
+		player.set_joystick_direction(dir)
+
 func _on_joystick_moved(direction: Vector2) -> void:
+	# Legacy compat — also update player direction
 	if player and player.has_method("set_joystick_direction"):
 		player.set_joystick_direction(direction)
 

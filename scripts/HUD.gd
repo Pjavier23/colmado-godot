@@ -1,6 +1,9 @@
 extends CanvasLayer
 ## HUD.gd - Heads-up display and virtual joystick controller.
+## Fully rewritten for bulletproof iOS touch support.
 
+# Signals — direction_changed is the primary signal; joystick_moved kept for compat
+signal direction_changed(dir: Vector2)
 signal joystick_moved(direction: Vector2)
 signal fire_pressed
 signal weapon_selected(weapon_name: String)
@@ -25,10 +28,16 @@ const WEAPON_COLORS = {
 	"fart": Color(0.5, 0.9, 0.3),
 }
 
+# Touch tracking
+var _joy_finger: int = -1
+var _joy_origin: Vector2 = Vector2.ZERO
+var _fire_finger: int = -1
+
+# Legacy state kept for compatibility
 var joystick_active: bool = false
 var joystick_touch_id: int = -1
 var joystick_base_pos: Vector2 = Vector2.ZERO
-const JOYSTICK_RADIUS = 55.0
+const JOYSTICK_RADIUS = 60.0
 
 var current_weapon: String = "platano"
 var weapons_list: Array = ["platano", "huevo", "salami", "fart"]
@@ -38,6 +47,30 @@ func _ready() -> void:
 	if joystick_base:
 		joystick_base_pos = joystick_base.global_position + joystick_base.size / 2
 	_update_weapon_display()
+
+	# Use unhandled_input so Button presses still go to buttons first,
+	# but joystick/fire zone touches (on non-Button areas) always work.
+	set_process_unhandled_input(true)
+
+	# Connect GameOverPanel buttons programmatically
+	var retry = get_node_or_null("GameOverPanel/RetryButton")
+	var menu_btn = get_node_or_null("GameOverPanel/MenuButton")
+	if retry:
+		if not retry.pressed.is_connected(_on_retry_button_pressed):
+			retry.pressed.connect(_on_retry_button_pressed)
+	if menu_btn:
+		if not menu_btn.pressed.is_connected(_on_menu_button_pressed):
+			menu_btn.pressed.connect(_on_menu_button_pressed)
+
+func _on_retry_button_pressed() -> void:
+	GameState.reset_run()
+	get_tree().change_scene_to_file("res://scenes/GameScene.tscn")
+
+func _on_menu_button_pressed() -> void:
+	GameState.save()
+	get_tree().change_scene_to_file("res://scenes/MenuScene.tscn")
+
+# ─── HUD update methods ───────────────────────────────────────────────────────
 
 func update_score(score: int) -> void:
 	if score_label:
@@ -109,59 +142,58 @@ func update_arrow(direction: Vector2) -> void:
 func _update_weapon_display() -> void:
 	pass
 
-func _input(event: InputEvent) -> void:
-	_handle_joystick(event)
-	_handle_fire(event)
+# ─── Touch input (iOS-first, bulletproof) ────────────────────────────────────
 
-func _handle_joystick(event: InputEvent) -> void:
+func _unhandled_input(event: InputEvent) -> void:
+	var screen_size = get_viewport().get_visible_rect().size
+
 	if event is InputEventScreenTouch:
-		var touch_pos = event.position
-		if joystick_base and _is_in_joystick_zone(touch_pos):
-			if event.pressed:
+		if event.pressed:
+			# Left 45% of screen → joystick
+			if event.position.x < screen_size.x * 0.45:
+				_joy_finger = event.index
+				_joy_origin = event.position
 				joystick_active = true
 				joystick_touch_id = event.index
-				_update_joystick(touch_pos)
-			else:
-				if event.index == joystick_touch_id:
-					joystick_active = false
-					joystick_touch_id = -1
-					_reset_joystick()
+				# Move joystick base to touch point
+				if joystick_base:
+					joystick_base.global_position = event.position - joystick_base.size / 2
+				if joystick_knob:
+					joystick_knob.global_position = event.position - joystick_knob.size / 2
+			# Right 45%+ bottom half → fire
+			elif event.position.x > screen_size.x * 0.55 and event.position.y > screen_size.y * 0.5:
+				_fire_finger = event.index
+				emit_signal("fire_pressed")
+		else:
+			# Finger lifted
+			if event.index == _joy_finger:
+				_joy_finger = -1
+				joystick_active = false
+				joystick_touch_id = -1
+				emit_signal("direction_changed", Vector2.ZERO)
+				emit_signal("joystick_moved", Vector2.ZERO)
+				_reset_joystick()
+			if event.index == _fire_finger:
+				_fire_finger = -1
 
 	elif event is InputEventScreenDrag:
-		if joystick_active and event.index == joystick_touch_id:
-			_update_joystick(event.position)
+		if event.index == _joy_finger:
+			var offset = event.position - _joy_origin
+			var clamped = offset.limit_length(JOYSTICK_RADIUS)
+			var dir = offset.normalized() if offset.length() > 15 else Vector2.ZERO
+			emit_signal("direction_changed", dir)
+			emit_signal("joystick_moved", dir)
+			if joystick_knob:
+				joystick_knob.global_position = _joy_origin + clamped - joystick_knob.size / 2
 
-func _is_in_joystick_zone(pos: Vector2) -> bool:
-	# Left half of screen for joystick
-	return pos.x < get_viewport().get_visible_rect().size.x * 0.5
-
-func _update_joystick(touch_pos: Vector2) -> void:
-	if not joystick_base:
-		return
-	var base_center = joystick_base.global_position + joystick_base.size / 2
-	var delta = touch_pos - base_center
-	if delta.length() > JOYSTICK_RADIUS:
-		delta = delta.normalized() * JOYSTICK_RADIUS
-	if joystick_knob:
-		joystick_knob.position = joystick_base.position + joystick_base.size / 2 - joystick_knob.size / 2 + delta
-	emit_signal("joystick_moved", delta / JOYSTICK_RADIUS)
+	elif event is InputEventKey and event.pressed:
+		if event.keycode == KEY_SPACE:
+			emit_signal("fire_pressed")
 
 func _reset_joystick() -> void:
 	if not joystick_base or not joystick_knob:
 		return
 	joystick_knob.position = joystick_base.position + joystick_base.size / 2 - joystick_knob.size / 2
-	emit_signal("joystick_moved", Vector2.ZERO)
-
-func _handle_fire(event: InputEvent) -> void:
-	if event is InputEventScreenTouch and event.pressed:
-		if fire_button and _is_in_fire_zone(event.position):
-			emit_signal("fire_pressed")
-	if event is InputEventKey and event.pressed and event.keycode == KEY_SPACE:
-		emit_signal("fire_pressed")
-
-func _is_in_fire_zone(pos: Vector2) -> bool:
-	var vp = get_viewport().get_visible_rect().size
-	return pos.x > vp.x * 0.5
 
 func cycle_weapon() -> void:
 	current_weapon_idx = (current_weapon_idx + 1) % weapons_list.size()

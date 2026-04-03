@@ -28,11 +28,12 @@ const BUILDING_SIGNS = ["COLMADO", "FRIO-FRIO", "LOTERIA", "CHIMICHURRI", "VARIE
 func _ready() -> void:
 	_setup_buildings()
 	_start_wobble()
+	# Make the whole screen tappable — bulletproof for iOS
+	set_process_input(true)
 
 func _input(event: InputEvent) -> void:
-	if event is InputEventScreenTouch and event.pressed:
-		get_tree().change_scene_to_file("res://scenes/MissionSelect.tscn")
-	elif event is InputEventMouseButton and event.pressed:
+	if (event is InputEventScreenTouch and event.pressed) or \
+	   (event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT):
 		get_tree().change_scene_to_file("res://scenes/MissionSelect.tscn")
 	elif event is InputEventKey and event.pressed and event.keycode == KEY_SPACE:
 		get_tree().change_scene_to_file("res://scenes/MissionSelect.tscn")

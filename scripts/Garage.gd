@@ -44,19 +44,37 @@ func _ready() -> void:
 	_update_display()
 	if money_label:
 		money_label.text = "$ %d" % GameState.money
-	# Connect button signals
-	if buy_button and not buy_button.pressed.is_connected(_on_buy_button_pressed):
+	# Connect all buttons programmatically (bulletproof for iOS)
+	_connect_buttons()
+
+func _connect_buttons() -> void:
+	# BuyButton
+	if buy_button:
+		if buy_button.pressed.is_connected(_on_buy_button_pressed):
+			buy_button.pressed.disconnect(_on_buy_button_pressed)
 		buy_button.pressed.connect(_on_buy_button_pressed)
-	if select_button and not select_button.pressed.is_connected(_on_select_button_pressed):
+	# SelectButton
+	if select_button:
+		if select_button.pressed.is_connected(_on_select_button_pressed):
+			select_button.pressed.disconnect(_on_select_button_pressed)
 		select_button.pressed.connect(_on_select_button_pressed)
+	# BackButton
 	var back_btn = get_node_or_null("ButtonPanel/BackButton")
-	if back_btn and not back_btn.pressed.is_connected(_on_back_button_pressed):
+	if back_btn:
+		if back_btn.pressed.is_connected(_on_back_button_pressed):
+			back_btn.pressed.disconnect(_on_back_button_pressed)
 		back_btn.pressed.connect(_on_back_button_pressed)
+	# PrevButton
 	var prev_btn = get_node_or_null("NavButtons/PrevButton")
-	if prev_btn and not prev_btn.pressed.is_connected(_on_prev_button_pressed):
+	if prev_btn:
+		if prev_btn.pressed.is_connected(_on_prev_button_pressed):
+			prev_btn.pressed.disconnect(_on_prev_button_pressed)
 		prev_btn.pressed.connect(_on_prev_button_pressed)
+	# NextButton
 	var next_btn = get_node_or_null("NavButtons/NextButton")
-	if next_btn and not next_btn.pressed.is_connected(_on_next_button_pressed):
+	if next_btn:
+		if next_btn.pressed.is_connected(_on_next_button_pressed):
+			next_btn.pressed.disconnect(_on_next_button_pressed)
 		next_btn.pressed.connect(_on_next_button_pressed)
 
 func _select(idx: int) -> void:
