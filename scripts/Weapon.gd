@@ -1,3 +1,4 @@
+class_name Weapon
 extends Area2D
 ## Weapon.gd - Projectile/weapon controller.
 ## Types: platano (boomerang), huevo (straight), salami (arc), fart (aoe slow)
