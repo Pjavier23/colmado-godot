@@ -2,6 +2,7 @@ class_name Weapon
 extends Area2D
 ## Weapon.gd - Projectile/weapon controller.
 ## Types: platano (boomerang), huevo (straight), salami (arc), fart (aoe slow)
+## Spec 2: Physics-based boomerang arc, grenade explosion arc.
 
 enum WeaponType { PLATANO, HUEVO, SALAMI, FART }
 
@@ -11,22 +12,23 @@ var damage: int = 1
 var lifetime: float = 3.0
 var elapsed: float = 0.0
 var origin: Vector2 = Vector2.ZERO
+var spawn_position: Vector2 = Vector2.ZERO
 var has_hit: bool = false
 
-# Platano boomerang state
-var boomerang_returning: bool = false
+# Platano boomerang state (Spec 2 physics)
+var flight_time: float = 0.0
 var boomerang_speed: float = 300.0
 
-# Salami arc
-var arc_tween: Tween = null
-var arc_target: Vector2 = Vector2.ZERO
+# Salami arc state (Spec 2 physics)
+var arc_velocity: Vector2 = Vector2.ZERO
+var arc_gravity: float = 300.0
+var has_exploded: bool = false
 
 # Fart cloud
 var fart_radius: float = 60.0
 var fart_active: bool = true
 
 @onready var body_rect: ColorRect = $BodyRect
-@onready var hit_area: Area2D = $HitDetect if has_node("HitDetect") else null
 
 const WEAPON_TEXTURES = {
 	WeaponType.PLATANO: "res://assets/sprites/weapons/platano.png",
@@ -49,11 +51,10 @@ signal weapon_expired
 
 func _ready() -> void:
 	origin = global_position
+	spawn_position = global_position
 	_setup_visuals()
 	_setup_weapon_sprite()
-	if weapon_type == WeaponType.SALAMI:
-		_start_arc()
-	elif weapon_type == WeaponType.FART:
+	if weapon_type == WeaponType.FART:
 		_start_fart()
 
 func _setup_weapon_sprite() -> void:
@@ -91,30 +92,40 @@ func _physics_process(delta: float) -> void:
 
 	match weapon_type:
 		WeaponType.PLATANO:
-			_update_platano(delta)
+			_platano_update(delta)
 		WeaponType.HUEVO:
 			_update_huevo(delta)
+		WeaponType.SALAMI:
+			_salami_update(delta)
 		WeaponType.FART:
 			_update_fart(delta)
 
-func _update_platano(delta: float) -> void:
-	if not boomerang_returning:
-		global_position += velocity * delta
-		# After 0.4s reverse
-		if elapsed > 0.4:
-			boomerang_returning = true
-			velocity = -velocity * 0.8
-	else:
-		global_position += velocity * delta
-		# Visual spin
-		rotation += delta * 10.0
-		if weapon_sprite:
-			weapon_sprite.rotation += delta * 10.0
-		# If returned near origin
-		if global_position.distance_to(origin) < 20:
-			emit_signal("weapon_expired")
-			queue_free()
+# ─── Platano Boomerang (Spec 2 curved physics) ────────────────────────────────
+func _platano_update(delta: float) -> void:
+	flight_time += delta
+	var t = flight_time / 1.5  # normalize over 1.5 second flight
 
+	if t < 0.5:
+		# Outward phase - fly forward with slight curve
+		position += velocity * delta
+		velocity = velocity.rotated(2.0 * delta)
+	elif t < 1.0:
+		# Return phase - curve back to spawn origin
+		var to_origin = (spawn_position - position).normalized()
+		velocity = velocity.lerp(to_origin * 200.0, 0.1)
+		position += velocity * delta
+	else:
+		emit_signal("weapon_expired")
+		queue_free()
+		return
+
+	# Spin the weapon sprite
+	if weapon_sprite:
+		weapon_sprite.rotate(8.0 * delta)
+	else:
+		rotation += 8.0 * delta
+
+# ─── Huevo (Straight shot) ────────────────────────────────────────────────────
 func _update_huevo(delta: float) -> void:
 	global_position += velocity * delta
 	rotation += delta * 5.0
@@ -126,33 +137,57 @@ func _update_huevo(delta: float) -> void:
 		emit_signal("weapon_expired")
 		queue_free()
 
-func _start_arc() -> void:
-	arc_target = global_position + Vector2(randf_range(-100, 100), randf_range(80, 200))
-	var mid = (global_position + arc_target) / 2 + Vector2(0, -120)
-	arc_tween = create_tween()
-	arc_tween.set_ease(Tween.EASE_IN_OUT)
-	# Simulate arc with position
-	arc_tween.tween_method(_arc_move.bind(global_position, arc_target), 0.0, 1.0, 1.0)
-	arc_tween.tween_callback(_salami_explode)
+# ─── Salami Grenade (Spec 2 arc + explosion) ─────────────────────────────────
+func _salami_update(delta: float) -> void:
+	if has_exploded:
+		return
+	arc_velocity.y += arc_gravity * delta
+	position += arc_velocity * delta
 
-func _arc_move(t: float, start: Vector2, end: Vector2) -> void:
-	var mid = (start + end) / 2 + Vector2(0, -100)
-	# Quadratic bezier
-	var p = start.lerp(mid, t).lerp(mid.lerp(end, t), t)
-	global_position = p
-	rotation += 0.3
+	# Rotate to show arc trajectory
+	if weapon_sprite:
+		weapon_sprite.rotation += 5.0 * delta
+	else:
+		rotation += 5.0 * delta
 
-func _salami_explode() -> void:
-	# Create explosion visual
-	if body_rect:
-		body_rect.size = Vector2(50, 50)
-		body_rect.position = -body_rect.size / 2
-		body_rect.color = Color(1.0, 0.4, 0.0, 0.8)
-	await get_tree().create_timer(0.3).timeout
+	# Check if landed (road level ~y > 500 or past viewport bottom)
+	var vp = get_viewport_rect().size
+	if position.y > vp.y - 50 and not has_exploded:
+		has_exploded = true
+		_explode()
+
+func _explode() -> void:
+	if not is_inside_tree():
+		return
+
+	# Show explosion circle
+	var circle = ColorRect.new()
+	circle.size = Vector2(80, 80)
+	circle.position = global_position - Vector2(40, 40)
+	circle.color = Color(1, 0.5, 0, 0.6)
+	if get_parent():
+		get_parent().add_child(circle)
+
+	# Damage nearby enemies via distance check
+	if get_parent():
+		var enemy_container = get_parent().get_parent().get_node_or_null("EnemyContainer")
+		if enemy_container:
+			for enemy in enemy_container.get_children():
+				if not is_instance_valid(enemy):
+					continue
+				if global_position.distance_to(enemy.global_position) < 80:
+					if enemy.has_method("take_damage"):
+						enemy.take_damage(damage)
+
+	# Fade and remove explosion circle
+	var tween = create_tween()
+	tween.tween_property(circle, "modulate:a", 0.0, 0.5)
+	tween.tween_callback(circle.queue_free)
+
 	emit_signal("weapon_expired")
-	if is_instance_valid(self):
-		queue_free()
+	queue_free()
 
+# ─── Fart Cloud ───────────────────────────────────────────────────────────────
 func _start_fart() -> void:
 	if weapon_sprite:
 		weapon_sprite.modulate = Color(1, 1, 1, 0.0)
@@ -166,7 +201,6 @@ func _start_fart() -> void:
 		tween.tween_property(body_rect, "color:a", 0.2, 2.0)
 
 func _update_fart(delta: float) -> void:
-	# Wobble slightly
 	global_position += Vector2(sin(elapsed * 3) * 20, cos(elapsed * 2) * 10) * delta
 
 func _on_area_entered(area: Area2D) -> void:
@@ -197,8 +231,10 @@ func setup(type: WeaponType, dir: Vector2) -> void:
 			damage = 1
 			lifetime = 3.0
 		WeaponType.SALAMI:
+			# Initial arc velocity: forward with slight upward arc
+			arc_velocity = dir.normalized() * 180.0 + Vector2(0, -200.0)
 			damage = 2
-			lifetime = 4.0
+			lifetime = 5.0
 		WeaponType.FART:
 			damage = 0
 			lifetime = 3.0

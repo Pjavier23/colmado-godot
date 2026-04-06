@@ -1,10 +1,10 @@
 extends Node2D
 ## GameScene.gd - Main gameplay scene.
 ## Top-down courier arcade with PS1 aesthetic.
+## Spec 2: Collision detection, POW effects, powerup collection, wave spawning.
 
 # ─── Constants ───────────────────────────────────────────────────────────────
 const SCROLL_SPEED = 150.0
-const ENEMY_SPAWN_INTERVAL = 4.0
 const ROAD_MARK_COUNT = 8
 const BUILDING_COUNT = 6
 
@@ -29,6 +29,7 @@ var enemy_speed_mult: float = 1.0
 
 var current_weapon: String = "platano"
 var weapon_ammo: Dictionary = {}
+var fire_cooldown_mult: float = 1.0
 
 var pickup_active: bool = false
 var dropoff_active: bool = false
@@ -39,16 +40,21 @@ var streak: int = 0
 
 var enemies: Array = []
 var active_weapons: Array = []
-var spawn_timer: float = 0.0
+var powerups: Array = []
 var game_over: bool = false
 var paused_game: bool = false
+
+# ─── Wave spawn system (Spec 2) ───────────────────────────────────────────────
+var spawn_timer: float = 0.0
+var spawn_interval: float = 3.0
+var wave: int = 0
+var enemies_per_wave: int = 3
 
 # Scrolling world
 var road_marks: Array = []
 var buildings_left: Array = []
 var buildings_right: Array = []
 
-# Player direction (set by HUD)
 var player_direction: Vector2 = Vector2.ZERO
 
 # ─── Node references ──────────────────────────────────────────────────────────
@@ -62,7 +68,6 @@ var player_direction: Vector2 = Vector2.ZERO
 @onready var enemy_container: Node2D = $EnemyContainer
 @onready var weapon_container: Node2D = $WeaponContainer
 
-# Weapon scene scripts (instantiated procedurally)
 const WeaponScript = preload("res://scripts/Weapon.gd")
 const EnemyScript = preload("res://scripts/Enemy.gd")
 
@@ -79,11 +84,9 @@ func _ready() -> void:
 func _connect_hud() -> void:
 	if not hud:
 		return
-	# Connect direction_changed (new primary signal)
 	if hud.has_signal("direction_changed"):
 		if not hud.direction_changed.is_connected(_on_direction_changed):
 			hud.direction_changed.connect(_on_direction_changed)
-	# Also connect old joystick_moved for compatibility
 	if hud.has_signal("joystick_moved"):
 		if not hud.joystick_moved.is_connected(_on_joystick_moved):
 			hud.joystick_moved.connect(_on_joystick_moved)
@@ -95,7 +98,6 @@ func _connect_hud() -> void:
 			hud.weapon_selected.connect(_on_weapon_selected)
 
 func _connect_game_over_buttons() -> void:
-	# Connect game over panel buttons as backup (HUD._ready also does this)
 	var retry_btn = get_node_or_null("HUD/GameOverPanel/RetryButton")
 	if retry_btn:
 		if not retry_btn.pressed.is_connected(_on_retry_button_pressed):
@@ -122,20 +124,18 @@ func _setup_world() -> void:
 		return
 	var vp = get_viewport_rect().size
 
-	# Add tiled road texture overlay on the RoadBg node
 	var road_bg = get_node_or_null("World/RoadBg")
 	if road_bg:
 		var road_tex = TextureRect.new()
 		road_tex.name = "RoadTexture"
 		road_tex.texture = load("res://assets/sprites/tiles/road.png")
 		road_tex.stretch_mode = TextureRect.STRETCH_TILE
-		road_tex.anchors_preset = 15  # full rect
+		road_tex.anchors_preset = 15
 		road_tex.anchor_right = 1.0
 		road_tex.anchor_bottom = 1.0
-		road_tex.modulate = Color(1, 1, 1, 0.4)  # subtle overlay
+		road_tex.modulate = Color(1, 1, 1, 0.4)
 		road_bg.add_child(road_tex)
 
-	# Add tiled grass texture on sidewalks/grass strips
 	for grass_node_name in ["GrassLeft", "GrassRight"]:
 		var grass_node = get_node_or_null("World/" + grass_node_name)
 		if grass_node:
@@ -148,7 +148,6 @@ func _setup_world() -> void:
 			grass_tex.modulate = Color(1, 1, 1, 0.5)
 			grass_node.add_child(grass_tex)
 
-	# Add tiled sidewalk texture
 	for sw_node_name in ["SidewalkLeft", "SidewalkRight"]:
 		var sw_node = get_node_or_null("World/" + sw_node_name)
 		if sw_node:
@@ -161,7 +160,6 @@ func _setup_world() -> void:
 			sw_tex.modulate = Color(1, 1, 1, 0.5)
 			sw_node.add_child(sw_tex)
 
-	# Road center strip - road marks
 	for i in ROAD_MARK_COUNT:
 		var mark = ColorRect.new()
 		mark.size = Vector2(8, 40)
@@ -170,13 +168,11 @@ func _setup_world() -> void:
 		world.add_child(mark)
 		road_marks.append(mark)
 
-	# Buildings left
 	for i in BUILDING_COUNT:
 		var b = _create_building(true, i)
 		world.add_child(b)
 		buildings_left.append(b)
 
-	# Buildings right
 	for i in BUILDING_COUNT:
 		var b = _create_building(false, i)
 		world.add_child(b)
@@ -193,21 +189,18 @@ func _create_building(left: bool, idx: int) -> Node2D:
 	var colors = [Color(0.25, 0.25, 0.45), Color(0.35, 0.20, 0.25), Color(0.20, 0.35, 0.25)]
 	var bcolor = colors[randi() % colors.size()]
 
-	# Front face
 	var front = ColorRect.new()
 	front.size = Vector2(bw, bh)
 	front.color = bcolor
 	front.position = Vector2(bx, by)
 	container.add_child(front)
 
-	# Top face (isometric look)
 	var top = ColorRect.new()
 	top.size = Vector2(bw, 14)
 	top.color = bcolor.lightened(0.25)
 	top.position = Vector2(bx, by - 14)
 	container.add_child(top)
 
-	# Windows
 	var signs = ["COLMADO", "VARIEDADES", "FRIO-FRIO", "LOTERIA", "FARMACIA"]
 	var lbl = Label.new()
 	lbl.text = signs[randi() % signs.size()]
@@ -234,6 +227,8 @@ func _connect_player() -> void:
 		return
 	player.connect("player_hit", _on_player_hit)
 	player.connect("player_died", _on_player_died)
+	if player.has_signal("package_dropped"):
+		player.connect("package_dropped", _on_package_dropped)
 
 # ─── Main loop ────────────────────────────────────────────────────────────────
 func _process(delta: float) -> void:
@@ -243,24 +238,22 @@ func _process(delta: float) -> void:
 	_scroll_world(delta)
 	_update_timer(delta)
 	_check_deliveries()
-	_spawn_enemies(delta)
+	_update_spawning(delta)
+	_check_weapon_hits()
 	_check_enemy_player_collision()
+	_check_powerup_collection()
 	_update_arrow()
-
-	# PS1 wobble on buildings
 	_wobble_buildings(delta)
 
 func _scroll_world(delta: float) -> void:
 	if not world:
 		return
 
-	# Scroll road marks
 	for mark in road_marks:
 		mark.position.y += SCROLL_SPEED * delta
 		if mark.position.y > get_viewport_rect().size.y + 20:
 			mark.position.y -= (get_viewport_rect().size.y + 60)
 
-	# Scroll buildings
 	for b in buildings_left + buildings_right:
 		b.position.y += SCROLL_SPEED * delta * 0.3
 		var h = b.get_meta("height", 200)
@@ -284,7 +277,6 @@ func _check_deliveries() -> void:
 	if not player:
 		return
 
-	# Pickup check
 	if not has_package and pickup_active and pickup_marker:
 		if player.global_position.distance_to(pickup_marker.global_position + pickup_marker.size/2) < 40:
 			has_package = true
@@ -297,7 +289,6 @@ func _check_deliveries() -> void:
 				hud.show_delivery_message("¡COGISTE EL PAQUETE!", Color(0.2, 1.0, 0.4))
 			_spawn_dropoff()
 
-	# Dropoff check
 	elif has_package and dropoff_active and dropoff_marker:
 		if player.global_position.distance_to(dropoff_marker.global_position + dropoff_marker.size/2) < 40:
 			_complete_delivery()
@@ -327,12 +318,25 @@ func _complete_delivery() -> void:
 	else:
 		await get_tree().create_timer(0.5).timeout
 		_spawn_pickup()
+		# Chance to spawn a powerup after delivery
+		if randf() < 0.4:
+			_spawn_powerup()
 
-func _spawn_enemies(delta: float) -> void:
-	spawn_timer -= delta
-	if spawn_timer <= 0:
-		spawn_timer = ENEMY_SPAWN_INTERVAL
-		_spawn_enemy()
+# ─── Wave-based spawn system (Spec 2) ─────────────────────────────────────────
+func _update_spawning(delta: float) -> void:
+	spawn_timer += delta
+	if spawn_timer >= spawn_interval:
+		spawn_timer = 0.0
+		_spawn_wave()
+		spawn_interval = max(1.0, spawn_interval - 0.2)  # Gets faster over time
+
+func _spawn_wave() -> void:
+	wave += 1
+	var count = min(wave, enemies_per_wave)
+	for i in count:
+		await get_tree().create_timer(i * 0.5).timeout
+		if not game_over:
+			_spawn_enemy()
 
 func _spawn_enemy() -> void:
 	var type_roll = randf()
@@ -386,10 +390,44 @@ func _create_enemy_node(etype) -> CharacterBody2D:
 			e.global_position = Vector2(randf_range(40, vp.x - 40), -40)
 
 	e.setup(etype, player)
+	e.speed_multiplier = enemy_speed_mult
 	return e
 
+# ─── Weapon hit detection (Spec 2) ────────────────────────────────────────────
+func _check_weapon_hits() -> void:
+	for weapon in weapon_container.get_children():
+		if not is_instance_valid(weapon) or not weapon.is_inside_tree():
+			continue
+		for enemy in enemy_container.get_children():
+			if not is_instance_valid(enemy) or not enemy.is_inside_tree():
+				continue
+			if not enemy.get("active"):
+				continue
+			if weapon.position.distance_to(enemy.position) < 40:
+				if enemy.has_method("take_damage"):
+					enemy.take_damage(weapon.damage if "damage" in weapon else 1)
+				var wtype = weapon.get("weapon_type")
+				if wtype != null and wtype != Weapon.WeaponType.FART:
+					_show_hit_effect(weapon.global_position)
+					if is_instance_valid(weapon):
+						weapon.queue_free()
+					break
+
+func _show_hit_effect(pos: Vector2) -> void:
+	var label = Label.new()
+	label.text = (["POW!", "BAM!", "DALE!", "AY!"] as Array).pick_random()
+	label.position = pos - Vector2(20, 20)
+	label.add_theme_color_override("font_color", Color.YELLOW)
+	label.add_theme_font_size_override("font_size", 20)
+	add_child(label)
+	var tween = create_tween()
+	tween.tween_property(label, "position:y", pos.y - 60, 0.5)
+	tween.parallel().tween_property(label, "modulate:a", 0.0, 0.5)
+	tween.tween_callback(label.queue_free)
+
+# ─── Enemy–Player collision ───────────────────────────────────────────────────
 func _check_enemy_player_collision() -> void:
-	if not player or player.invincible:
+	if not player or player.is_invincible:
 		return
 	for e in enemies:
 		if not is_instance_valid(e) or not e.active:
@@ -397,7 +435,7 @@ func _check_enemy_player_collision() -> void:
 		if player.global_position.distance_to(e.global_position) < 28:
 			lives -= 1
 			streak = 0
-			player.take_hit()
+			player.take_damage(1)
 			if hud:
 				hud.update_lives(lives)
 				hud.show_delivery_message("¡AY! -1 VIDA", Color(1, 0.2, 0.1))
@@ -405,6 +443,84 @@ func _check_enemy_player_collision() -> void:
 				player.die()
 			break
 
+# ─── Power-up system (Spec 2) ─────────────────────────────────────────────────
+func _spawn_powerup() -> void:
+	var vp = get_viewport_rect().size
+	var types = ["presidente", "mangu", "cafe"]
+	var pu_type = types[randi() % types.size()]
+
+	var pu = ColorRect.new()
+	pu.size = Vector2(24, 24)
+	pu.position = Vector2(randf_range(60, vp.x - 60), randf_range(150, vp.y - 150))
+	pu.set_meta("powerup_type", pu_type)
+
+	match pu_type:
+		"presidente":
+			pu.color = Color(0.0, 0.6, 1.0)
+		"mangu":
+			pu.color = Color(0.8, 0.4, 0.0)
+		"cafe":
+			pu.color = Color(0.4, 0.2, 0.0)
+
+	# Label to identify powerup
+	var lbl = Label.new()
+	lbl.add_theme_font_size_override("font_size", 8)
+	lbl.add_theme_color_override("font_color", Color.WHITE)
+	lbl.text = pu_type.to_upper()
+	lbl.position = Vector2(0, -14)
+	pu.add_child(lbl)
+
+	add_child(pu)
+	powerups.append(pu)
+
+	# Auto-remove after 15 seconds if not collected
+	await get_tree().create_timer(15.0).timeout
+	if is_instance_valid(pu):
+		powerups.erase(pu)
+		pu.queue_free()
+
+func _check_powerup_collection() -> void:
+	if not player:
+		return
+	for pu in powerups.duplicate():
+		if not is_instance_valid(pu):
+			powerups.erase(pu)
+			continue
+		var center = pu.position + pu.size / 2
+		if player.position.distance_to(center) < 30:
+			var pu_type = pu.get_meta("powerup_type", "")
+			_apply_powerup(pu_type)
+			powerups.erase(pu)
+			pu.queue_free()
+
+func _apply_powerup(type: String) -> void:
+	match type:
+		"presidente":
+			if hud:
+				hud.show_delivery_message("¡PRESIDENTE! TURBO 10s", Color(0.0, 0.8, 1.0))
+			player.speed_multiplier = 2.0
+			player.is_invincible = true
+			player.invincible_timer = 10.0
+			player.flicker_time = 0.0
+			await get_tree().create_timer(10.0).timeout
+			if is_instance_valid(player):
+				player.speed_multiplier = 1.0
+				player.is_invincible = false
+		"mangu":
+			lives = min(lives + 1, 3)
+			if player:
+				player.lives = lives
+			if hud:
+				hud.update_lives(lives)
+				hud.show_delivery_message("¡MANGÚ! +1 VIDA", Color(0.9, 0.5, 0.1))
+		"cafe":
+			if hud:
+				hud.show_delivery_message("¡CAFÉ! FUEGO RÁPIDO 15s", Color(0.5, 0.3, 0.0))
+			fire_cooldown_mult = 0.3
+			await get_tree().create_timer(15.0).timeout
+			fire_cooldown_mult = 1.0
+
+# ─── Navigation arrow ─────────────────────────────────────────────────────────
 func _update_arrow() -> void:
 	if not hud:
 		return
@@ -426,7 +542,6 @@ func _spawn_pickup() -> void:
 		pickup_marker.global_position = pickup_pos - pickup_marker.size / 2
 		pickup_marker.visible = true
 
-	# Show colmado building sprite at pickup location
 	if colmado_sprite == null:
 		colmado_sprite = Sprite2D.new()
 		colmado_sprite.texture = load("res://assets/sprites/buildings/colmado.png")
@@ -437,7 +552,6 @@ func _spawn_pickup() -> void:
 
 func _spawn_dropoff() -> void:
 	var vp = get_viewport_rect().size
-	# Make sure dropoff is far from pickup
 	var attempts = 0
 	dropoff_pos = Vector2(randf_range(60, vp.x - 60), randf_range(150, vp.y - 150))
 	while dropoff_pos.distance_to(pickup_pos) < 150 and attempts < 10:
@@ -449,14 +563,12 @@ func _spawn_dropoff() -> void:
 	dropoff_active = true
 
 # ─── Input / Signal handlers ──────────────────────────────────────────────────
-
 func _on_direction_changed(dir: Vector2) -> void:
 	player_direction = dir
 	if player and player.has_method("set_joystick_direction"):
 		player.set_joystick_direction(dir)
 
 func _on_joystick_moved(direction: Vector2) -> void:
-	# Legacy compat — also update player direction
 	if player and player.has_method("set_joystick_direction"):
 		player.set_joystick_direction(direction)
 
@@ -470,6 +582,10 @@ func _on_weapon_selected(weapon_name: String) -> void:
 	if hud:
 		hud.update_weapon(current_weapon, weapon_ammo.get(current_weapon, 0))
 
+func _on_package_dropped() -> void:
+	has_package = false
+	streak = 0
+
 func _fire_weapon() -> void:
 	var ammo = weapon_ammo.get(current_weapon, 0)
 	if ammo <= 0:
@@ -479,7 +595,6 @@ func _fire_weapon() -> void:
 
 	weapon_ammo[current_weapon] = ammo - 1
 
-	# Determine fire direction (toward nearest enemy or up)
 	var fire_dir = Vector2.UP
 	if enemies.size() > 0:
 		var nearest = _get_nearest_enemy()
