@@ -85,7 +85,8 @@ func _setup_visuals() -> void:
 
 func _physics_process(delta: float) -> void:
 	elapsed += delta
-	if elapsed >= lifetime:
+	# Hard cap: auto-free after 5 seconds regardless of type
+	if elapsed >= min(lifetime, 5.0):
 		emit_signal("weapon_expired")
 		queue_free()
 		return

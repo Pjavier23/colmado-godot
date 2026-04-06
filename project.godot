@@ -13,7 +13,7 @@ config/name="Colmado Dash"
 config/description="Dominican Republic courier arcade game"
 run/main_scene="res://scenes/Main.tscn"
 config/features=PackedStringArray("4.3", "Mobile")
-config/icon="res://icon.svg"
+config/icon="res://icon.png"
 
 [autoload]
 
@@ -25,6 +25,7 @@ window/size/viewport_width=390
 window/size/viewport_height=844
 window/stretch/mode="canvas_items"
 window/stretch/aspect="expand"
+window/handheld/orientation=1
 
 [input]
 
@@ -58,7 +59,12 @@ fire={
 ]
 }
 
+[physics]
+
+2d/default_gravity=980
+
 [rendering]
 
 renderer/rendering_method="mobile"
+renderer/rendering_method.mobile="gl_compatibility"
 textures/canvas_textures/default_texture_filter=0

@@ -1,5 +1,5 @@
 extends Node2D
-## MenuScene.gd - Title screen with PS1-style aesthetics.
+## MenuScene.gd - Title screen with PS1-style aesthetics and splash intro.
 
 @onready var title_label: Label = $TitleContainer/TitleLabel
 @onready var press_start_label: Label = $PressStartLabel
@@ -10,6 +10,9 @@ extends Node2D
 var blink_visible: bool = true
 var wobble_time: float = 0.0
 var building_scroll_speed: float = 80.0
+
+# Intro state — block navigation until fade-in completes
+var _intro_done: bool = false
 
 # Building data for scrolling city
 var buildings_data: Array = []
@@ -27,11 +30,25 @@ const BUILDING_SIGNS = ["COLMADO", "FRIO-FRIO", "LOTERIA", "CHIMICHURRI", "VARIE
 
 func _ready() -> void:
 	_setup_buildings()
+	_add_kenney_decorations()
+	_add_moped_sprite()
 	_start_wobble()
 	# Make the whole screen tappable — bulletproof for iOS
 	set_process_input(true)
+	_play_intro()
+
+func _play_intro() -> void:
+	_intro_done = false
+	modulate.a = 0.0
+	var tween = create_tween()
+	tween.tween_property(self, "modulate:a", 1.0, 0.5)
+	await tween.finished
+	_intro_done = true
 
 func _input(event: InputEvent) -> void:
+	# Block taps during fade-in
+	if not _intro_done:
+		return
 	if (event is InputEventScreenTouch and event.pressed) or \
 	   (event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT):
 		get_tree().change_scene_to_file("res://scenes/MissionSelect.tscn")
@@ -50,9 +67,6 @@ func _setup_buildings() -> void:
 		buildings_data.append(b)
 		building_nodes.append(b)
 		x_pos += b["width"] + randi() % 10 + 2
-
-	# Add animated moped sprite riding across the road strip
-	_add_moped_sprite()
 
 func _add_kenney_decorations() -> void:
 	# Add kenney road overlay on menu

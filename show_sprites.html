@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:#0a0a2e; padding:20px; font-family:'Courier New',monospace; }
+h2 { color:#FFD700; font-size:12px; letter-spacing:2px; margin:16px 0 8px; text-transform:uppercase; }
+.grid { display:flex; flex-wrap:wrap; gap:12px; margin-bottom:20px; }
+.sprite-card { background:#1a1a3e; border:2px solid #333; padding:10px; text-align:center; border-radius:8px; }
+.sprite-card img { image-rendering:pixelated; display:block; margin:0 auto 6px; }
+.sprite-card p { color:#888; font-size:9px; }
+</style>
+</head>
+<body>
+
+<h2>🏍️ Player Vehicles</h2>
+<div class="grid">
+  <div class="sprite-card"><img src="assets/sprites/vehicles/moped_player.png" width="88" height="200"><p>moped_player</p></div>
+  <div class="sprite-card"><img src="assets/sprites/vehicles/bicycle_player.png" width="88" height="200"><p>bicycle</p></div>
+  <div class="sprite-card"><img src="assets/kenney/racing/car_yellow_1.png" width="142" height="262"><p>car (unlock)</p></div>
+</div>
+
+<h2>🚗 Enemy Cars</h2>
+<div class="grid">
+  <div class="sprite-card"><img src="assets/sprites/vehicles/enemy_car1.png" width="142" height="262"><p>red car</p></div>
+  <div class="sprite-card"><img src="assets/sprites/vehicles/enemy_car2.png" width="142" height="232"><p>blue car</p></div>
+  <div class="sprite-card"><img src="assets/sprites/vehicles/enemy_car3.png" width="140" height="262"><p>black car</p></div>
+  <div class="sprite-card"><img src="assets/sprites/vehicles/police_car.png" width="80" height="140"><p>police</p></div>
+</div>
+
+<h2>👤 Characters</h2>
+<div class="grid">
+  <div class="sprite-card"><img src="assets/sprites/characters/saboteur.png" width="104" height="72"><p>saboteur</p></div>
+  <div class="sprite-card"><img src="assets/kenney/racing/character_brown_red.png" width="104" height="72"><p>enemy 2</p></div>
+  <div class="sprite-card"><img src="assets/kenney/racing/character_blonde_blue.png" width="104" height="72"><p>enemy 3</p></div>
+</div>
+
+<h2>⚔️ Weapons</h2>
+<div class="grid">
+  <div class="sprite-card"><img src="assets/sprites/weapons/platano.png" width="64" height="32"><p>🍌 platano</p></div>
+  <div class="sprite-card"><img src="assets/sprites/weapons/huevo.png" width="32" height="40"><p>🥚 huevo</p></div>
+  <div class="sprite-card"><img src="assets/sprites/weapons/salami.png" width="40" height="20"><p>🥩 salami</p></div>
+  <div class="sprite-card"><img src="assets/sprites/weapons/fart.png" width="64" height="64"><p>💨 fart</p></div>
+</div>
+
+<h2>🛣️ Road & Environment</h2>
+<div class="grid">
+  <div class="sprite-card"><img src="assets/sprites/tiles/road.png" width="128" height="128"><p>asphalt road</p></div>
+  <div class="sprite-card"><img src="assets/sprites/tiles/grass.png" width="128" height="128"><p>grass</p></div>
+  <div class="sprite-card"><img src="assets/kenney/racing/road_asphalt01.png" width="128" height="128"><p>road tile 1</p></div>
+  <div class="sprite-card"><img src="assets/kenney/racing/tree_small.png" width="141" height="141"><p>tree</p></div>
+  <div class="sprite-card"><img src="assets/kenney/racing/tree_large.png" width="141" height="141"><p>tree large</p></div>
+</div>
+
+<h2>🏘️ Buildings (Tiny Town)</h2>
+<div class="grid" id="buildings">
+</div>
+
+<h2>🎮 UI Elements</h2>
+<div class="grid">
+  <div class="sprite-card"><img src="assets/kenney/ui/button_round_flat.png" width="80" height="80"><p>fire btn</p></div>
+  <div class="sprite-card"><img src="assets/kenney/ui/arrow_basic_n.png" width="50" height="50"><p>arrow</p></div>
+  <div class="sprite-card"><img src="assets/kenney/ui/star.png" width="50" height="50"><p>star</p></div>
+  <div class="sprite-card"><img src="assets/kenney/icons/joystick.png" width="50" height="50"><p>joystick</p></div>
+</div>
+
+<script>
+// Add tiny town building tiles
+const bldgs = document.getElementById('buildings');
+for(let i=0; i<20; i++) {
+  const n = String(i).padStart(4,'0');
+  const card = document.createElement('div');
+  card.className = 'sprite-card';
+  card.innerHTML = `<img src="assets/kenney/tiny-town/tile_${n}.png" width="48" height="48"><p>tile_${n}</p>`;
+  bldgs.appendChild(card);
+}
+</script>
+
+</body>
+</html>

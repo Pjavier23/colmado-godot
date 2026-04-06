@@ -43,6 +43,9 @@ var active_weapons: Array = []
 var powerups: Array = []
 var game_over: bool = false
 var paused_game: bool = false
+var get_ready: bool = true
+
+const MAX_ENEMIES = 8
 
 # ─── Wave spawn system (Spec 2) ───────────────────────────────────────────────
 var spawn_timer: float = 0.0
@@ -76,10 +79,36 @@ func _ready() -> void:
 	_load_mission()
 	_setup_world()
 	_setup_hud()
-	_spawn_pickup()
 	_connect_player()
 	_connect_hud()
 	_connect_game_over_buttons()
+	# Center player on screen
+	var vp = get_viewport_rect().size
+	if player:
+		player.global_position = vp / 2
+	_play_get_ready()
+
+func _play_get_ready() -> void:
+	get_ready = true
+	var label = Label.new()
+	label.text = "GET READY!"
+	label.add_theme_font_size_override("font_size", 48)
+	label.add_theme_color_override("font_color", Color(1.0, 0.9, 0.1))
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	label.anchor_right = 1.0
+	label.anchor_bottom = 1.0
+	label.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	label.grow_vertical = Control.GROW_DIRECTION_BOTH
+	add_child(label)
+	var tween = create_tween()
+	tween.tween_property(label, "modulate:a", 1.0, 0.2)
+	tween.tween_interval(1.5)
+	tween.tween_property(label, "modulate:a", 0.0, 0.3)
+	await tween.finished
+	label.queue_free()
+	get_ready = false
+	_spawn_pickup()
 
 func _connect_hud() -> void:
 	if not hud:
@@ -232,7 +261,7 @@ func _connect_player() -> void:
 
 # ─── Main loop ────────────────────────────────────────────────────────────────
 func _process(delta: float) -> void:
-	if game_over or paused_game:
+	if game_over or paused_game or get_ready:
 		return
 
 	_scroll_world(delta)
@@ -339,6 +368,9 @@ func _spawn_wave() -> void:
 			_spawn_enemy()
 
 func _spawn_enemy() -> void:
+	# Cap active enemies for iPhone performance
+	if enemy_container and enemy_container.get_child_count() >= MAX_ENEMIES:
+		return
 	var type_roll = randf()
 	var etype
 	if type_roll < 0.5:
