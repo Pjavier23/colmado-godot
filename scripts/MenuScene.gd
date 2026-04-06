@@ -54,6 +54,18 @@ func _setup_buildings() -> void:
 	# Add animated moped sprite riding across the road strip
 	_add_moped_sprite()
 
+func _add_kenney_decorations() -> void:
+	# Add kenney road overlay on menu
+	var road_tile_tex = load("res://assets/kenney/racing/road_asphalt01.png")
+	if road_tile_tex:
+		var road_rect = TextureRect.new()
+		road_rect.texture = road_tile_tex
+		road_rect.stretch_mode = TextureRect.STRETCH_TILE
+		road_rect.size = Vector2(420, 80)
+		road_rect.position = Vector2(-15, 700)
+		road_rect.modulate.a = 0.7
+		add_child(road_rect)
+
 func _add_moped_sprite() -> void:
 	var road_strip = get_node_or_null("RoadStrip")
 	var road_y = 740.0  # default road center y

@@ -26,8 +26,8 @@ var enemy_sprite: Sprite2D = null
 
 const ENEMY_TEXTURES = {
 	EnemyType.SABOTEUR: "res://assets/sprites/characters/saboteur.png",
-	EnemyType.CAR: "res://assets/sprites/vehicles/enemy_car1.png",
-	EnemyType.POLICE: "res://assets/sprites/vehicles/police_car.png",
+	EnemyType.CAR: "res://assets/kenney/racing/car_red_1.png",
+	EnemyType.POLICE: "res://assets/kenney/racing/car_blue_small_1.png",
 }
 
 const ENEMY_COLORS = {
