@@ -122,6 +122,45 @@ func _setup_world() -> void:
 		return
 	var vp = get_viewport_rect().size
 
+	# Add tiled road texture overlay on the RoadBg node
+	var road_bg = get_node_or_null("World/RoadBg")
+	if road_bg:
+		var road_tex = TextureRect.new()
+		road_tex.name = "RoadTexture"
+		road_tex.texture = load("res://assets/sprites/tiles/road.png")
+		road_tex.stretch_mode = TextureRect.STRETCH_TILE
+		road_tex.anchors_preset = 15  # full rect
+		road_tex.anchor_right = 1.0
+		road_tex.anchor_bottom = 1.0
+		road_tex.modulate = Color(1, 1, 1, 0.4)  # subtle overlay
+		road_bg.add_child(road_tex)
+
+	# Add tiled grass texture on sidewalks/grass strips
+	for grass_node_name in ["GrassLeft", "GrassRight"]:
+		var grass_node = get_node_or_null("World/" + grass_node_name)
+		if grass_node:
+			var grass_tex = TextureRect.new()
+			grass_tex.texture = load("res://assets/sprites/tiles/grass.png")
+			grass_tex.stretch_mode = TextureRect.STRETCH_TILE
+			grass_tex.anchors_preset = 15
+			grass_tex.anchor_right = 1.0
+			grass_tex.anchor_bottom = 1.0
+			grass_tex.modulate = Color(1, 1, 1, 0.5)
+			grass_node.add_child(grass_tex)
+
+	# Add tiled sidewalk texture
+	for sw_node_name in ["SidewalkLeft", "SidewalkRight"]:
+		var sw_node = get_node_or_null("World/" + sw_node_name)
+		if sw_node:
+			var sw_tex = TextureRect.new()
+			sw_tex.texture = load("res://assets/sprites/tiles/sidewalk.png")
+			sw_tex.stretch_mode = TextureRect.STRETCH_TILE
+			sw_tex.anchors_preset = 15
+			sw_tex.anchor_right = 1.0
+			sw_tex.anchor_bottom = 1.0
+			sw_tex.modulate = Color(1, 1, 1, 0.5)
+			sw_node.add_child(sw_tex)
+
 	# Road center strip - road marks
 	for i in ROAD_MARK_COUNT:
 		var mark = ColorRect.new()
@@ -251,6 +290,8 @@ func _check_deliveries() -> void:
 			has_package = true
 			pickup_active = false
 			pickup_marker.visible = false
+			if colmado_sprite:
+				colmado_sprite.visible = false
 			player.has_package = true
 			if hud:
 				hud.show_delivery_message("¡COGISTE EL PAQUETE!", Color(0.2, 1.0, 0.4))
@@ -376,12 +417,22 @@ func _update_arrow() -> void:
 	else:
 		hud.update_arrow(Vector2.ZERO)
 
+var colmado_sprite: Sprite2D = null
+
 func _spawn_pickup() -> void:
 	var vp = get_viewport_rect().size
 	pickup_pos = Vector2(randf_range(60, vp.x - 60), randf_range(150, vp.y - 150))
 	if pickup_marker:
 		pickup_marker.global_position = pickup_pos - pickup_marker.size / 2
 		pickup_marker.visible = true
+
+	# Show colmado building sprite at pickup location
+	if colmado_sprite == null:
+		colmado_sprite = Sprite2D.new()
+		colmado_sprite.texture = load("res://assets/sprites/buildings/colmado.png")
+		add_child(colmado_sprite)
+	colmado_sprite.global_position = pickup_pos - Vector2(0, 70)
+	colmado_sprite.visible = true
 	pickup_active = true
 
 func _spawn_dropoff() -> void:

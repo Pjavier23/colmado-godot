@@ -28,6 +28,15 @@ var fart_active: bool = true
 @onready var body_rect: ColorRect = $BodyRect
 @onready var hit_area: Area2D = $HitDetect if has_node("HitDetect") else null
 
+const WEAPON_TEXTURES = {
+	WeaponType.PLATANO: "res://assets/sprites/weapons/platano.png",
+	WeaponType.HUEVO: "res://assets/sprites/weapons/huevo.png",
+	WeaponType.SALAMI: "res://assets/sprites/weapons/salami.png",
+	WeaponType.FART: "res://assets/sprites/weapons/fart.png",
+}
+
+var weapon_sprite: Sprite2D = null
+
 const WEAPON_COLORS = {
 	WeaponType.PLATANO: Color(1.0, 0.85, 0.1),
 	WeaponType.HUEVO: Color(0.95, 0.95, 0.85),
@@ -41,10 +50,22 @@ signal weapon_expired
 func _ready() -> void:
 	origin = global_position
 	_setup_visuals()
+	_setup_weapon_sprite()
 	if weapon_type == WeaponType.SALAMI:
 		_start_arc()
 	elif weapon_type == WeaponType.FART:
 		_start_fart()
+
+func _setup_weapon_sprite() -> void:
+	var tex_path = WEAPON_TEXTURES.get(weapon_type, "")
+	if tex_path:
+		weapon_sprite = Sprite2D.new()
+		weapon_sprite.name = "WeaponSprite"
+		weapon_sprite.texture = load(tex_path)
+		weapon_sprite.position = Vector2(0, 0)
+		add_child(weapon_sprite)
+		if body_rect:
+			body_rect.visible = false
 
 func _setup_visuals() -> void:
 	if not body_rect:
@@ -87,6 +108,8 @@ func _update_platano(delta: float) -> void:
 		global_position += velocity * delta
 		# Visual spin
 		rotation += delta * 10.0
+		if weapon_sprite:
+			weapon_sprite.rotation += delta * 10.0
 		# If returned near origin
 		if global_position.distance_to(origin) < 20:
 			emit_signal("weapon_expired")
@@ -95,6 +118,8 @@ func _update_platano(delta: float) -> void:
 func _update_huevo(delta: float) -> void:
 	global_position += velocity * delta
 	rotation += delta * 5.0
+	if weapon_sprite:
+		weapon_sprite.rotation += delta * 5.0
 	var vp = get_viewport_rect().size
 	if global_position.x < -20 or global_position.x > vp.x + 20 or \
 	   global_position.y < -20 or global_position.y > vp.y + 20:
@@ -129,11 +154,16 @@ func _salami_explode() -> void:
 		queue_free()
 
 func _start_fart() -> void:
-	if body_rect:
+	if weapon_sprite:
+		weapon_sprite.modulate = Color(1, 1, 1, 0.0)
+		var tween = create_tween()
+		tween.tween_property(weapon_sprite, "modulate:a", 0.7, 0.5)
+		tween.tween_property(weapon_sprite, "modulate:a", 0.3, 2.0)
+	elif body_rect:
 		body_rect.color = Color(0.5, 0.9, 0.3, 0.0)
-	var tween = create_tween()
-	tween.tween_property(body_rect, "color:a", 0.5, 0.5)
-	tween.tween_property(body_rect, "color:a", 0.2, 2.0)
+		var tween = create_tween()
+		tween.tween_property(body_rect, "color:a", 0.5, 0.5)
+		tween.tween_property(body_rect, "color:a", 0.2, 2.0)
 
 func _update_fart(delta: float) -> void:
 	# Wobble slightly

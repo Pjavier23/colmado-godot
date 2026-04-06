@@ -20,6 +20,14 @@ var stun_timer: float = 0.0
 @onready var body_rect: ColorRect = $BodyRect
 @onready var hit_area: Area2D = $HitArea
 
+var enemy_sprite: Sprite2D = null
+
+const ENEMY_TEXTURES = {
+	EnemyType.SABOTEUR: "res://assets/sprites/characters/saboteur.png",
+	EnemyType.CAR: "res://assets/sprites/vehicles/enemy_car1.png",
+	EnemyType.POLICE: "res://assets/sprites/vehicles/police_car.png",
+}
+
 const ENEMY_COLORS = {
 	EnemyType.SABOTEUR: Color(0.9, 0.1, 0.1),
 	EnemyType.CAR: Color(0.8, 0.6, 0.0),
@@ -45,6 +53,18 @@ func _ready() -> void:
 			EnemyType.POLICE:
 				body_rect.size = Vector2(26, 36)
 		body_rect.position = -body_rect.size / 2
+	_setup_enemy_sprite()
+
+func _setup_enemy_sprite() -> void:
+	var tex_path = ENEMY_TEXTURES.get(enemy_type, "")
+	if tex_path:
+		enemy_sprite = Sprite2D.new()
+		enemy_sprite.name = "EnemySprite"
+		enemy_sprite.texture = load(tex_path)
+		enemy_sprite.position = Vector2(0, 0)
+		add_child(enemy_sprite)
+		if body_rect:
+			body_rect.visible = false
 
 func _physics_process(delta: float) -> void:
 	if not active:
@@ -112,8 +132,13 @@ func apply_slow(duration: float) -> void:
 
 func take_damage(amount: int = 1) -> bool:
 	health -= amount
-	if body_rect:
-		# Flash white
+	# Flash white — use sprite if available, else body_rect
+	if enemy_sprite:
+		enemy_sprite.modulate = Color.WHITE
+		await get_tree().create_timer(0.1).timeout
+		if is_instance_valid(self) and enemy_sprite:
+			enemy_sprite.modulate = Color.WHITE  # reset to white (normal)
+	elif body_rect:
 		var original = body_rect.color
 		body_rect.color = Color.WHITE
 		await get_tree().create_timer(0.1).timeout

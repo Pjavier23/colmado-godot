@@ -27,6 +27,9 @@ var joystick_dir: Vector2 = Vector2.ZERO
 # Visual flicker for invincibility
 var flicker_time: float = 0.0
 
+# Sprite reference (replaces ColorRect visually)
+var player_sprite: Sprite2D = null
+
 @onready var body_rect: ColorRect = $BodyRect
 @onready var collision: CollisionShape2D = $CollisionShape2D
 @onready var package_indicator: ColorRect = $PackageIndicator
@@ -36,6 +39,30 @@ func _ready() -> void:
 	current_vehicle = GameState.vehicle
 	speed = SPEEDS.get(current_vehicle, 150.0)
 	_update_visuals()
+	_setup_player_sprite()
+
+func _setup_player_sprite() -> void:
+	var tex_path = ""
+	match current_vehicle:
+		"moped":
+			tex_path = "res://assets/sprites/vehicles/moped_player.png"
+		"bicycle":
+			tex_path = "res://assets/sprites/vehicles/bicycle_player.png"
+		"car":
+			tex_path = "res://assets/sprites/vehicles/enemy_car1.png"
+	if tex_path:
+		player_sprite = Sprite2D.new()
+		player_sprite.name = "PlayerSprite"
+		player_sprite.texture = load(tex_path)
+		player_sprite.position = Vector2(0, 0)
+		add_child(player_sprite)
+		if body_rect:
+			body_rect.visible = false
+		# Also hide wheel rects
+		var wf = get_node_or_null("WheelFront")
+		if wf: wf.visible = false
+		var wb = get_node_or_null("WheelBack")
+		if wb: wb.visible = false
 
 func _physics_process(delta: float) -> void:
 	if is_dead:
@@ -45,12 +72,17 @@ func _physics_process(delta: float) -> void:
 	if invincible:
 		invincible_timer -= delta
 		flicker_time += delta
+		var flicker_vis = fmod(flicker_time, 0.1) < 0.05
 		if body_rect:
-			body_rect.visible = fmod(flicker_time, 0.1) < 0.05
+			body_rect.visible = flicker_vis
+		if player_sprite:
+			player_sprite.visible = flicker_vis
 		if invincible_timer <= 0:
 			invincible = false
 			if body_rect:
-				body_rect.visible = true
+				body_rect.visible = false  # keep hidden if sprite is active
+			if player_sprite:
+				player_sprite.visible = true
 
 	# Move using joystick direction (set externally) or keyboard
 	var input_dir = joystick_dir
@@ -77,8 +109,11 @@ func _physics_process(delta: float) -> void:
 
 	# Rotation based on movement for visual effect
 	if velocity.length() > 10:
-		if body_rect:
-			body_rect.rotation = lerp_angle(body_rect.rotation, atan2(velocity.y, velocity.x) - PI/2, delta * 8.0)
+		var target_rot = lerp_angle(rotation, atan2(velocity.y, velocity.x) - PI/2, delta * 8.0)
+		if player_sprite:
+			player_sprite.rotation = target_rot
+		elif body_rect:
+			body_rect.rotation = target_rot
 
 func take_hit() -> void:
 	if invincible or is_dead:
@@ -92,7 +127,9 @@ func take_hit() -> void:
 func die() -> void:
 	is_dead = true
 	emit_signal("player_died")
-	if body_rect:
+	if player_sprite:
+		player_sprite.modulate = Color(0.5, 0.0, 0.0)
+	elif body_rect:
 		body_rect.color = Color(0.5, 0.0, 0.0)
 
 func pick_up_package() -> void:

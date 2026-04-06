@@ -51,6 +51,28 @@ func _setup_buildings() -> void:
 		building_nodes.append(b)
 		x_pos += b["width"] + randi() % 10 + 2
 
+	# Add animated moped sprite riding across the road strip
+	_add_moped_sprite()
+
+func _add_moped_sprite() -> void:
+	var road_strip = get_node_or_null("RoadStrip")
+	var road_y = 740.0  # default road center y
+	if road_strip:
+		road_y = road_strip.position.y + road_strip.size.y / 2
+
+	var moped = Sprite2D.new()
+	moped.name = "MopedSprite"
+	moped.texture = load("res://assets/sprites/vehicles/moped_player.png")
+	moped.position = Vector2(-60, road_y - 20)
+	# Rotate to face right (sprites face up by default)
+	moped.rotation = PI / 2
+	add_child(moped)
+
+	# Animate it riding right across the screen in a loop
+	var tween = create_tween().set_loops()
+	tween.tween_property(moped, "position:x", 460.0, 3.0).set_ease(Tween.EASE_IN_OUT)
+	tween.tween_property(moped, "position:x", -60.0, 0.01)  # instant reset
+
 func _make_building(x: float) -> Dictionary:
 	var height = randi() % 80 + 40
 	var width = randi() % 40 + 25
